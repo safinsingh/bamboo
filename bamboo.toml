@@ -1,0 +1,37 @@
+[[bar]]
+name = "main"
+
+# dimensions in pixels
+width = 1000
+height = 50
+
+# horizontal center
+center = true
+
+# offsets will be applied
+# on top of `center` if
+# it's enabled
+offset-x = 0
+offset-y = 0
+
+widgets = [
+	"clock"
+]
+
+# can be around, between, none
+widget-spacing = "around"
+
+[widgets.clock]
+# built-in module
+type = "time"
+# strftime-style format
+format = "%H:%M"
+
+# defaults to white and black
+# respectively
+foreground-normal = "#ffffff"
+background-normal = "#000000"
+
+# defaults to normals
+foreground-hover = "#ffffff"
+background-hover = "#000000"
