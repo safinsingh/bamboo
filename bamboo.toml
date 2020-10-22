@@ -1,4 +1,4 @@
-[bar]
+[bar.default]
 name = "main"
 bottom = true
 
@@ -25,7 +25,7 @@ widget-spacing = "around"
 # defaults to white and black
 # respectively
 foreground-normal = "#ffffff"
-background-normal = "#1a2630"
+background-normal = "#000000"
 
 # defaults to normals
 foreground-hover = "#ffffff"
