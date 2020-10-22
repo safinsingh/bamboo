@@ -1,8 +1,13 @@
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, error::Error};
 use x11rb::{
-	connection::Connection, protocol::xproto::*, COPY_DEPTH_FROM_PARENT
+	connection::Connection,
+	protocol::xproto::{ConnectionExt, Rectangle, *},
+	wrapper::ConnectionExt as _,
+	COPY_DEPTH_FROM_PARENT,
 };
+
+use std::u32;
 
 #[derive(Deserialize, Debug)]
 pub struct Bar {
@@ -20,6 +25,14 @@ pub struct Bar {
 	pub widgets: Vec<String>,
 	#[serde(rename = "widget-spacing")]
 	pub widget_spacing: String,
+	#[serde(rename = "foreground-normal", default = "default_black")]
+	pub foreground_normal: String,
+	#[serde(rename = "background-normal", default = "default_white")]
+	pub background_normal: String,
+	#[serde(rename = "foreground-hover", default = "default_black")]
+	pub foreground_hover: String,
+	#[serde(rename = "background-hover", default = "default_white")]
+	pub background_hover: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -96,23 +109,44 @@ impl Bar {
 
 		conn.map_window(win)?;
 
-		let _colormap = screen.default_colormap;
-		conn.create_colormap(
-			ColormapAlloc::All,
-			_colormap,
-			win,
-			screen.root_visual,
-		)
-		.expect("error creating colormap");
+		let pixmap = conn.generate_id()?;
+		conn.create_pixmap(
+			screen.root_depth,
+			pixmap,
+			screen.root,
+			self.width,
+			self.height,
+		)?;
 
-		let win_aux = CreateWindowAux::new()
-		.event_mask(EventMask::Exposure | EventMask::StructureNotify | EventMask::NoEvent)
-		.background_pixel(screen.white_pixel)
-		.win_gravity(Gravity::NorthWest);
+		let gc = conn.generate_id().unwrap();
+		let gc_aux = CreateGCAux::new().foreground(u32::from_str_radix(
+			self.background_normal.trim_start_matches("#"),
+			16,
+		)?);
+		conn.create_gc(gc, screen.root, &gc_aux)?;
 
-		let gc_aux = CreateGCAux::new().foreground(screen.black_pixel);
+		let rect = Rectangle {
+			x: 0,
+			y: 0,
+			width: self.width,
+			height: self.height,
+		};
 
 		conn.flush()?;
+
+		conn.poly_fill_rectangle(pixmap, gc, &[rect])?;
+
+		conn.change_window_attributes(
+			win,
+			&ChangeWindowAttributesAux::new().background_pixmap(pixmap),
+		)?;
+
+		conn.clear_area(false, win, 0, 0, 0, 0)?;
+
+		conn.free_pixmap(pixmap)?;
+		conn.free_gc(gc)?;
+
+		conn.sync()?;
 
 		Ok(())
 	}

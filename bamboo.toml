@@ -22,6 +22,15 @@ widgets = [
 # can be around, between, none
 widget-spacing = "around"
 
+# defaults to white and black
+# respectively
+foreground-normal = "#ffffff"
+background-normal = "#1a2630"
+
+# defaults to normals
+foreground-hover = "#ffffff"
+background-hover = "#1a2630"
+
 [widgets.clock]
 # built-in module
 type = "time"
