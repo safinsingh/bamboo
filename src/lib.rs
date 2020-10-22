@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, error::Error};
 use x11rb::{
-	connection::Connection, protocol::xproto::*, COPY_DEPTH_FROM_PARENT,
+	connection::Connection, protocol::xproto::*, COPY_DEPTH_FROM_PARENT
 };
 
 #[derive(Deserialize, Debug)]
@@ -95,7 +95,6 @@ impl Bar {
 		conn.change_window_attributes(win, &values)?;
 
 		conn.map_window(win)?;
-		conn.flush()?;
 
 		let _colormap = screen.default_colormap;
 		conn.create_colormap(
@@ -105,6 +104,15 @@ impl Bar {
 			screen.root_visual,
 		)
 		.expect("error creating colormap");
+
+		let win_aux = CreateWindowAux::new()
+		.event_mask(EventMask::Exposure | EventMask::StructureNotify | EventMask::NoEvent)
+		.background_pixel(screen.white_pixel)
+		.win_gravity(Gravity::NorthWest);
+
+		let gc_aux = CreateGCAux::new().foreground(screen.black_pixel);
+
+		conn.flush()?;
 
 		Ok(())
 	}
