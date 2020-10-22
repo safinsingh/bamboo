@@ -1,5 +1,9 @@
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::{collections::HashMap, convert::TryInto, error::Error};
+use x11rb::{
+	connection::Connection, protocol::xproto::*, COPY_DEPTH_FROM_PARENT,
+};
+
 #[derive(Deserialize, Debug)]
 pub struct Bar {
 	pub width: u16,
@@ -59,4 +63,49 @@ fn default_black() -> String {
 }
 fn default_time() -> String {
 	"%H:%M".into()
+}
+
+impl Bar {
+	pub fn draw(
+		&self,
+		conn: &(impl Connection + Send + Sync),
+		screen: &Screen,
+		win: Window,
+	) -> Result<(), Box<dyn Error>> {
+		conn.create_window(
+			COPY_DEPTH_FROM_PARENT,
+			win,
+			screen.root,
+			((screen.width_in_pixels - self.width) / 2).try_into()?,
+			(if self.bottom {
+				screen.height_in_pixels - self.height
+			} else {
+				0
+			}) as i16 + self.offset_y,
+			self.width,
+			self.height,
+			self.border_width,
+			WindowClass::InputOutput,
+			screen.root_visual,
+			&Default::default(),
+		)?;
+
+		let values =
+			ChangeWindowAttributesAux::default().override_redirect(1);
+		conn.change_window_attributes(win, &values)?;
+
+		conn.map_window(win)?;
+		conn.flush()?;
+
+		let _colormap = screen.default_colormap;
+		conn.create_colormap(
+			ColormapAlloc::All,
+			_colormap,
+			win,
+			screen.root_visual,
+		)
+		.expect("error creating colormap");
+
+		Ok(())
+	}
 }
