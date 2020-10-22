@@ -1,6 +1,6 @@
 extern crate x11rb;
 
-use std::{collections::HashMap, error::Error, fs};
+use std::{convert::TryInto, error::Error, fs};
 use x11rb::{
 	connection::Connection, protocol::xproto::*, COPY_DEPTH_FROM_PARENT,
 };
@@ -9,8 +9,8 @@ mod lib;
 use lib::*;
 
 fn main() -> Result<(), Box<dyn Error>> {
-	let read =
-		fs::read_to_string("bamboo.toml").expect("Couldn't find bamboo.toml!");
+	let read = fs::read_to_string("bamboo.toml")
+		.expect("Couldn't find bamboo.toml!");
 	let conf: Config =
 		toml::from_str(&read).expect("Couldn't deserialize bamboo.toml!");
 
@@ -25,26 +25,28 @@ fn main() -> Result<(), Box<dyn Error>> {
 		COPY_DEPTH_FROM_PARENT,
 		win,
 		screen.root,
-		(screen.width_in_pixels - conf.bar.width) / 2,
+		((screen.width_in_pixels - conf.bar.width) / 2).try_into()?,
 		(if conf.bar.bottom {
 			screen.height_in_pixels - conf.bar.height
 		} else {
 			0
-		}) + conf.bar.offset_y,
+		}) as i16 + conf.bar.offset_y,
 		conf.bar.width,
 		conf.bar.height,
-		conf.bar.border,
+		conf.bar.border_width,
 		WindowClass::InputOutput,
 		screen.root_visual,
 		&Default::default(),
 	)?;
 
+	let values = ChangeWindowAttributesAux::default().override_redirect(1);
+	conn.change_window_attributes(win, &values)?;
+
 	conn.map_window(win)?;
 	conn.flush()?;
 
 	let _colormap = screen.default_colormap;
-	create_colormap(
-		&conn,
+	conn.create_colormap(
 		ColormapAlloc::All,
 		_colormap,
 		win,

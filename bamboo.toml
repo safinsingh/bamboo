@@ -1,5 +1,6 @@
-[[bar]]
+[bar]
 name = "main"
+bottom = true
 
 # dimensions in pixels
 width = 1000
