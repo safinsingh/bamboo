@@ -1,8 +1,13 @@
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryInto, error::Error};
 use x11rb::{
-	connection::Connection, protocol::xproto::*, COPY_DEPTH_FROM_PARENT,
+	connection::Connection,
+	protocol::xproto::{ConnectionExt, Rectangle, *},
+	wrapper::ConnectionExt as _,
+	COPY_DEPTH_FROM_PARENT,
 };
+
+use std::u32;
 
 #[derive(Deserialize, Debug)]
 pub struct Bar {
@@ -20,11 +25,19 @@ pub struct Bar {
 	pub widgets: Vec<String>,
 	#[serde(rename = "widget-spacing")]
 	pub widget_spacing: String,
+	#[serde(rename = "foreground-normal", default = "default_black")]
+	pub foreground_normal: String,
+	#[serde(rename = "background-normal", default = "default_white")]
+	pub background_normal: String,
+	#[serde(rename = "foreground-hover", default = "default_black")]
+	pub foreground_hover: String,
+	#[serde(rename = "background-hover", default = "default_white")]
+	pub background_hover: String,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
-	pub bar: Bar,
+	pub bar: HashMap<String, Bar>,
 	pub widgets: HashMap<String, Widget>,
 }
 
@@ -72,39 +85,78 @@ impl Bar {
 		screen: &Screen,
 		win: Window,
 	) -> Result<(), Box<dyn Error>> {
-		conn.create_window(
-			COPY_DEPTH_FROM_PARENT,
-			win,
-			screen.root,
-			((screen.width_in_pixels - self.width) / 2).try_into()?,
-			(if self.bottom {
-				screen.height_in_pixels - self.height
-			} else {
-				0
-			}) as i16 + self.offset_y,
-			self.width,
-			self.height,
-			self.border_width,
-			WindowClass::InputOutput,
-			screen.root_visual,
-			&Default::default(),
+		let root = screen.root;
+		let root_sz = (screen.width_in_pixels, screen.height_in_pixels);
+		let x_pos = ((root_sz.0 - self.width) / 2).try_into()?;
+		let y_pos = (if self.bottom {
+			root_sz.1 - self.height
+		} else {
+			0
+		}) as i16 + self.offset_y;
+		let bg_color = u32::from_str_radix(
+			self.background_normal.trim_start_matches('#'),
+			16,
 		)?;
 
+		conn.create_window(
+			COPY_DEPTH_FROM_PARENT,   // window depth
+			win,                      // window id
+			root,                     // parent window
+			x_pos,                    // x position
+			y_pos,                    // y position
+			self.width,               // width
+			self.height,              // height
+			self.border_width,        // border width
+			WindowClass::InputOutput, // window class
+			screen.root_visual,       // visual
+			&Default::default(),      // value list
+		)?;
+
+		// override default wm decorations
 		let values =
 			ChangeWindowAttributesAux::default().override_redirect(1);
 		conn.change_window_attributes(win, &values)?;
 
 		conn.map_window(win)?;
+
+		let pixmap = conn.generate_id()?;
+		conn.create_pixmap(
+			screen.root_depth,
+			pixmap,
+			root,
+			self.width,
+			self.height,
+		)?;
+
+		let gc = conn.generate_id().unwrap();
+		let gc_aux = CreateGCAux::new().foreground(bg_color);
+		conn.create_gc(gc, root, &gc_aux)?;
+
+		let rect = Rectangle {
+			x: 0,
+			y: 0,
+			width: self.width,
+			height: self.height,
+		};
+
 		conn.flush()?;
 
-		let _colormap = screen.default_colormap;
-		conn.create_colormap(
-			ColormapAlloc::All,
-			_colormap,
+		// fill gc with rectangle spanning entire w/h
+		conn.poly_fill_rectangle(pixmap, gc, &[rect])?;
+
+		// draw pixmap on window
+		conn.change_window_attributes(
 			win,
-			screen.root_visual,
-		)
-		.expect("error creating colormap");
+			&ChangeWindowAttributesAux::new().background_pixmap(pixmap),
+		)?;
+
+		conn.clear_area(false, win, 0, 0, 0, 0)?;
+
+		// destroy pixmap and gc
+		conn.free_pixmap(pixmap)?;
+		conn.free_gc(gc)?;
+
+		conn.sync()?;
 
 		Ok(())
 	}
