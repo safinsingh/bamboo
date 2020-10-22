@@ -28,16 +28,20 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	// Create the window
 	conn.create_window(
-		COPY_DEPTH_FROM_PARENT,   // depth (same as root)
-		win,                      // window Id
-		screen.root,              // parent window
-		0,                        // x
-		0,                        // y
-		conf.bar.width,           // width
-		conf.bar.height,          // height
-		10,                       // border width
-		WindowClass::InputOutput, // class
-		screen.root_visual,       // visual
+		COPY_DEPTH_FROM_PARENT,
+		win,
+		screen.root,
+		(screen.width_in_pixels - conf.bar.width) / 2,
+		(if conf.bar.bottom {
+			screen.height_in_pixels - conf.bar.height
+		} else {
+			0
+		}) + conf.bar.offset_y,
+		conf.bar.width,
+		conf.bar.height,
+		conf.bar.border,
+		WindowClass::InputOutput,
+		screen.root_visual,
 		&Default::default(),
 	)?; // masks, not used yet
 
