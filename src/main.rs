@@ -16,17 +16,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	println!("{:?}", conf);
 
-	// Open the connection to the X server
-	// using the DISPLAY environment variable
 	let (conn, screen_num) = x11rb::connect(None)?;
 
-	// Get current screen by screen number
 	let screen = &conn.setup().roots[screen_num];
-
-	// Generate window id
 	let win = conn.generate_id()?;
 
-	// Create the window
 	conn.create_window(
 		COPY_DEPTH_FROM_PARENT,
 		win,
@@ -43,12 +37,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 		WindowClass::InputOutput,
 		screen.root_visual,
 		&Default::default(),
-	)?; // masks, not used yet
+	)?;
 
-	// Map the window on the screen
 	conn.map_window(win)?;
-
-	// Make sure commands are sent before the sleep, so window is shown
 	conn.flush()?;
 
 	let _colormap = screen.default_colormap;
