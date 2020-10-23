@@ -1,21 +1,50 @@
-use anyhow::{Context, Result};
+use crate::conf::Bar;
+
+use anyhow::Context;
+
 use std::{convert::TryInto, u32};
 use x11rb::{
 	connection::Connection,
-	protocol::xproto::{ConnectionExt, Rectangle, *},
-	wrapper::ConnectionExt as _,
+	protocol::xproto::{ConnectionExt, *},
 	COPY_DEPTH_FROM_PARENT,
 };
 
-use crate::conf::Bar;
+// https://github.com/psychon/x11rb/issues/328
+fn find_xcb_visualtype(
+	conn: &xcb::Connection,
+	visual_id: u32,
+) -> Option<xcb::Visualtype> {
+	for root in conn.get_setup().roots() {
+		for depth in root.allowed_depths() {
+			for visual in depth.visuals() {
+				if visual.visual_id() == visual_id {
+					return Some(visual);
+				}
+			}
+		}
+	}
+	None
+}
 
 impl Bar {
 	pub fn draw(
 		&self,
+		xcb_conn: &xcb::Connection,
 		conn: &(impl Connection + Send + Sync),
 		screen: &Screen,
 		win: Window,
-	) -> Result<()> {
+	) -> anyhow::Result<()> {
+		let cairo_conn = unsafe {
+			cairo::XCBConnection::from_raw_none(
+				xcb_conn.get_raw_conn() as _
+			)
+		};
+		let mut visual =
+			find_xcb_visualtype(&xcb_conn, screen.root_visual)
+				.with_context(|| {
+					"Failed to find visual type of root visual"
+				})?;
+
 		let root = screen.root;
 		let root_sz = (screen.width_in_pixels, screen.height_in_pixels);
 		let x_pos = ((root_sz.0 - self.width) / 2)
@@ -26,7 +55,7 @@ impl Bar {
 		} else {
 			0
 		}) as i16 + self.offset_y; // FIX: use try_into here
-		let bg_color = u32::from_str_radix(
+		let _bg_color = u32::from_str_radix(
 			self.background_normal.trim_start_matches('#'),
 			16,
 		)
@@ -49,6 +78,20 @@ impl Bar {
 		)
 		.with_context(|| "Failed to create bar window")?;
 
+		let surface = cairo::XCBSurface::create(
+			&cairo_conn,
+			&cairo::XCBDrawable(win),
+			unsafe {
+				&cairo::XCBVisualType::from_raw_full(
+					&mut visual.base as *mut _
+						as *mut cairo_sys::xcb_visualtype_t,
+				)
+			},
+			self.width.into(),
+			self.height.into(),
+		)
+		.with_context(|| "Failed to create cairo surface")?;
+
 		// override default wm decorations
 		let values =
 			ChangeWindowAttributesAux::default().override_redirect(1);
@@ -59,61 +102,16 @@ impl Bar {
 		conn.map_window(win)
 			.with_context(|| "Failed to map main bar window to root")?;
 
-		let pixmap = conn.generate_id().with_context(|| {
-			"Failed to generate new X11 ID for bar pixmap"
-		})?;
-		conn.create_pixmap(
-			screen.root_depth,
-			pixmap,
-			root,
-			self.width,
-			self.height,
-		)
-		.with_context(|| "Failed to create bar pixmap")?;
+		conn.flush()?;
 
-		let gc = conn.generate_id().with_context(|| {
-			"Failed to generate new X11 ID for bar graphics context"
-		})?;
-		let gc_aux = CreateGCAux::new().foreground(bg_color);
-		conn.create_gc(gc, root, &gc_aux).with_context(|| {
-			"Failed to create graphics context on root drawable"
-		})?;
+		let ctx = cairo::Context::new(&surface);
+		ctx.push_group_with_content(cairo::Content::Color);
 
-		let rect = Rectangle {
-			x: 0,
-			y: 0,
-			width: self.width,
-			height: self.height,
-		};
+		ctx.set_source_rgb(1.0, 1.0, 1.0);
+		ctx.paint();
 
-		conn.flush()
-			.with_context(|| "Failed to flush X11 connection")?;
-
-		// fill gc with rectangle spanning entire w/h
-		conn.poly_fill_rectangle(pixmap, gc, &[rect]).with_context(
-			|| "Failed to fill background rectangle on bar",
-		)?;
-
-		// draw pixmap on window
-		conn.change_window_attributes(
-			win,
-			&ChangeWindowAttributesAux::new().background_pixmap(pixmap),
-		)
-		.with_context(|| {
-			"Failed to assign background pixmap to bar window"
-		})?;
-
-		conn.clear_area(false, win, 0, 0, 0, 0)
-			.with_context(|| "Failed to clear window area")?;
-
-		// destroy pixmap and gc
-		conn.free_pixmap(pixmap)
-			.with_context(|| "Failed to destroy bar pixmap")?;
-		conn.free_gc(gc)
-			.with_context(|| "Failed to destroy bar graphics context")?;
-
-		conn.sync()
-			.with_context(|| "Failed to sync connection to X11 server")?;
+		surface.flush();
+		xcb_conn.flush();
 
 		Ok(())
 	}

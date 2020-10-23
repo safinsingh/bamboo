@@ -1,9 +1,8 @@
 [bar.default]
-name = "main"
 bottom = true
 
 # dimensions in pixels
-width = 1000
+width = 1200
 height = 50
 
 # horizontal center
@@ -13,7 +12,7 @@ center = true
 # on top of `center` if
 # it's enabled
 offset-x = 0
-offset-y = 0
+offset-y = -10
 
 widgets = [
 	"clock"
