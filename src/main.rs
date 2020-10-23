@@ -1,6 +1,8 @@
+extern crate notify;
 extern crate x11rb;
+extern crate xcb;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Context};
 use clap::Clap;
 use std::{
 	fs,
@@ -9,7 +11,7 @@ use std::{
 		Arc,
 	},
 };
-use x11rb::connection::Connection;
+use x11rb::{connection::Connection, xcb_ffi::XCBConnection};
 
 mod conf;
 use conf::*;
@@ -27,16 +29,26 @@ struct Opts {
 	bar: String,
 }
 
-fn main() -> Result<()> {
+fn main() -> anyhow::Result<()> {
 	let opts: Opts = Opts::parse();
 	let read = fs::read_to_string(&opts.config).with_context(|| {
 		format!("Failed to read configuration file from: {}", opts.config)
 	})?;
+
 	let conf: Config = toml::from_str(&read)
 		.with_context(|| "Failed to deserialize configuration")?;
 
-	let (conn, screen_num) = x11rb::connect(None)
+	let (xcb_conn, screen_num) = xcb::Connection::connect(None)
 		.with_context(|| "Failed to initialize connection to X server")?;
+	let screen_num = screen_num as usize;
+	let conn = unsafe {
+		XCBConnection::from_raw_xcb_connection(
+			xcb_conn.get_raw_conn() as _,
+			false,
+		)
+		.unwrap()
+	};
+
 	let screen = &conn.setup().roots[screen_num];
 	let win = conn
 		.generate_id()
@@ -48,14 +60,15 @@ fn main() -> Result<()> {
 	ctrlc::set_handler(move || {
 		r.store(false, Ordering::SeqCst);
 	})
-	.expect("Error setting Ctrl-C handler");
+	.with_context(|| "Error setting Ctrl-C handler")?;
 
 	while running.load(Ordering::SeqCst) {
 		let bar = conf
 			.bar
 			.get(&opts.bar)
 			.ok_or_else(|| anyhow!("Could not find bar: {}", opts.bar))?;
-		bar.draw(&conn, screen, win).with_context(|| {
+
+		bar.draw(&xcb_conn, &conn, screen, win).with_context(|| {
 			format!("Error encountered while drawing bar: {}", opts.bar)
 		})?;
 	}
