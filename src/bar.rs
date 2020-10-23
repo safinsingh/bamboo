@@ -107,7 +107,7 @@ impl Bar {
 		let ctx = cairo::Context::new(&surface);
 		ctx.push_group_with_content(cairo::Content::Color);
 
-		ctx.set_source_rgb(1.0, 1.0, 1.0);
+		ctx.set_source_rgba(0.9, 0.9, 1.0, 0.9);
 		ctx.paint();
 
 		surface.flush();
