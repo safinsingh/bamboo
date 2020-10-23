@@ -11,8 +11,9 @@ use std::{
 };
 use x11rb::connection::Connection;
 
-mod lib;
-use lib::*;
+mod conf;
+use conf::*;
+mod bar;
 
 #[derive(Clap)]
 #[clap(version = "0.1.0", author = "safinsingh <safin.singh@gmail.com>")]
@@ -53,7 +54,7 @@ fn main() -> Result<()> {
 		let bar = conf
 			.bar
 			.get(&opts.bar)
-			.ok_or(anyhow!("Could not find bar: {}", opts.bar))?;
+			.ok_or_else(|| anyhow!("Could not find bar: {}", opts.bar))?;
 		bar.draw(&conn, screen, win).with_context(|| {
 			format!("Error encountered while drawing bar: {}", opts.bar)
 		})?;
