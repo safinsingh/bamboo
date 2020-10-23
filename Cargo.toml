@@ -13,3 +13,4 @@ x11rb = "0.7.0"
 cairo-rs = "0.9.0"
 ctrlc = { version = "3.0", features = ["termination"] }
 clap = "3.0.0-beta.2"
+anyhow = "1.0.33"
