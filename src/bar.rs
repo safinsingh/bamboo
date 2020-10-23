@@ -9,6 +9,8 @@ use x11rb::{
 	COPY_DEPTH_FROM_PARENT,
 };
 
+use cairo::{FontFace, FontSlant, FontWeight};
+
 // https://github.com/psychon/x11rb/issues/328
 fn find_xcb_visualtype(
 	conn: &xcb::Connection,
@@ -99,15 +101,30 @@ impl Bar {
 			|| "Failed to set bar window attributes to override redirect",
 		)?;
 
-		conn.map_window(win)
-			.with_context(|| "Failed to map main bar window to root")?;
+		conn.map_window(win).with_context(|| {
+			"Failed to map main bar window to root window"
+		})?;
 
 		conn.flush()?;
 
 		let ctx = cairo::Context::new(&surface);
 		ctx.push_group_with_content(cairo::Content::Color);
 
-		ctx.set_source_rgba(0.9, 0.9, 1.0, 0.9);
+		ctx.set_source_rgb(0.1, 0.1, 0.1);
+		ctx.paint();
+
+		ctx.set_source_rgb(1.0, 1.0, 1.0);
+		ctx.set_font_face(&FontFace::toy_create(
+			"Noto Mono",
+			FontSlant::Normal,
+			FontWeight::Normal,
+		));
+		ctx.set_font_size(13.0);
+		ctx.move_to(20.0, 30.0);
+		ctx.show_text("Hello from Cairo!");
+
+		ctx.pop_group_to_source();
+		ctx.set_operator(cairo::Operator::Source);
 		ctx.paint();
 
 		surface.flush();
