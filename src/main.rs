@@ -1,3 +1,5 @@
+#![feature(bool_to_option)]
+
 extern crate notify;
 extern crate x11rb;
 extern crate xcb;
@@ -56,6 +58,7 @@ fn main() -> anyhow::Result<()> {
 
 	let running = Arc::new(AtomicBool::new(true));
 	let r = running.clone();
+	let mut ran = false;
 
 	ctrlc::set_handler(move || {
 		r.store(false, Ordering::SeqCst);
@@ -63,14 +66,22 @@ fn main() -> anyhow::Result<()> {
 	.with_context(|| "Error setting Ctrl-C handler")?;
 
 	while running.load(Ordering::SeqCst) {
-		let bar = conf
-			.bar
-			.get(&opts.bar)
-			.ok_or_else(|| anyhow!("Could not find bar: {}", opts.bar))?;
+		if ran == false {
+			let bar = conf.bar.get(&opts.bar).ok_or_else(|| {
+				anyhow!("Could not find bar: {}", opts.bar)
+			})?;
 
-		bar.draw(&xcb_conn, &conn, screen, win).with_context(|| {
-			format!("Error encountered while drawing bar: {}", opts.bar)
-		})?;
+			bar.draw(&xcb_conn, &conn, screen, win).with_context(
+				|| {
+					format!(
+						"Error encountered while drawing bar: {}",
+						opts.bar
+					)
+				},
+			)?;
+
+			ran = true;
+		}
 	}
 
 	Ok(())
