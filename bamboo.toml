@@ -15,32 +15,27 @@ offset-x = 0
 offset-y = -10
 
 widgets = [
-	"clock"
+	"hello-world"
 ]
 
 # can be around, between, none
 widget-spacing = "around"
 
-# defaults to white and black
-# respectively
-foreground-normal = "#ffffff"
-background-normal = "#000000"
+# color in hex
+background-color = "#000000"
 
-# defaults to normals
-foreground-hover = "#ffffff"
-background-hover = "#1a2630"
+[widgets.hello-world]
+type = "text"
+text = "Hello World!"
+font = "DejaVu Sans Mono"
 
-[widgets.clock]
-# built-in module
-type = "time"
-# strftime-style format
-format = "%H:%M"
+# must be a floating-point number
+# TODO: auto into this
+font-size = 13.0
 
-# defaults to white and black
-# respectively
-foreground-normal = "#ffffff"
-background-normal = "#000000"
+# weight can be italic, oblique, bold, normal
+# slant can be TODO
+font-style = { weight = "bold", slant = "none" }
 
-# defaults to normals
-foreground-hover = "#ffffff"
-background-hover = "#000000"
+# color in hex
+color = "#ffffff"

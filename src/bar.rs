@@ -1,7 +1,6 @@
 use crate::conf::Bar;
 
 use anyhow::Context;
-
 use std::{convert::TryInto, u32};
 use x11rb::{
 	connection::Connection,
@@ -9,7 +8,21 @@ use x11rb::{
 	COPY_DEPTH_FROM_PARENT,
 };
 
-use cairo::{FontFace, FontSlant, FontWeight};
+struct Rgb {
+	r: f64,
+	g: f64,
+	b: f64,
+}
+
+impl Rgb {
+	fn new(num: u32) -> Self {
+		Rgb {
+			r: (num >> 16).into(),
+			g: ((num >> 8) & 0xFF).into(),
+			b: (num & 0xFF).into(),
+		}
+	}
+}
 
 // https://github.com/psychon/x11rb/issues/328
 fn find_xcb_visualtype(
@@ -49,34 +62,38 @@ impl Bar {
 
 		let root = screen.root;
 		let root_sz = (screen.width_in_pixels, screen.height_in_pixels);
+
 		let x_pos = ((root_sz.0 - self.width) / 2)
 			.try_into()
 			.with_context(|| "Failed to set X position of bar")?;
-		let y_pos = (if self.bottom {
+		let y_pos = (if self.bottom == Some(true) {
 			root_sz.1 - self.height
 		} else {
 			0
-		}) as i16 + self.offset_y; // FIX: use try_into here
-		let _bg_color = u32::from_str_radix(
-			self.background_normal.trim_start_matches('#'),
-			16,
-		)
-		.with_context(|| {
-			"Failed to convert bar background color to u32"
-		})?;
+		}) as i16 + self.offset_y.unwrap_or(0); // FIX: use try_into here
+
+		let bg_color = Rgb::new(
+			u32::from_str_radix(
+				self.background_color.trim_start_matches('#'),
+				16,
+			)
+			.with_context(|| {
+				"Failed to convert bar background color to u32"
+			})?,
+		);
 
 		conn.create_window(
-			COPY_DEPTH_FROM_PARENT,   // window depth
-			win,                      // window id
-			root,                     // parent window
-			x_pos,                    // x position
-			y_pos,                    // y position
-			self.width,               // width
-			self.height,              // height
-			self.border_width,        // border width
-			WindowClass::InputOutput, // window class
-			screen.root_visual,       // visual
-			&Default::default(),      // value list
+			COPY_DEPTH_FROM_PARENT,         // window depth
+			win,                            // window id
+			root,                           // parent window
+			x_pos,                          // x position
+			y_pos,                          // y position
+			self.width,                     // width
+			self.height,                    // height
+			self.border_width.unwrap_or(0), // border width
+			WindowClass::InputOutput,       // window class
+			screen.root_visual,             // visual
+			&Default::default(),            // value list
 		)
 		.with_context(|| "Failed to create bar window")?;
 
@@ -110,25 +127,18 @@ impl Bar {
 		let ctx = cairo::Context::new(&surface);
 		ctx.push_group_with_content(cairo::Content::Color);
 
-		ctx.set_source_rgb(0.1, 0.1, 0.1);
+		ctx.set_source_rgb(bg_color.r, bg_color.g, bg_color.b);
 		ctx.paint();
-
-		ctx.set_source_rgb(1.0, 1.0, 1.0);
-		ctx.set_font_face(&FontFace::toy_create(
-			"Noto Mono",
-			FontSlant::Normal,
-			FontWeight::Normal,
-		));
-		ctx.set_font_size(13.0);
-		ctx.move_to(20.0, 30.0);
-		ctx.show_text("Hello from Cairo!");
 
 		ctx.pop_group_to_source();
 		ctx.set_operator(cairo::Operator::Source);
 		ctx.paint();
 
 		surface.flush();
-		xcb_conn.flush();
+		xcb_conn
+			.flush()
+			.then_some(())
+			.with_context(|| "Failed to flush xcb connection")?;
 
 		Ok(())
 	}

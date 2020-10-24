@@ -2,7 +2,8 @@ dev:
 	cargo build
 
 release:
-	cargo build --release -vv
+	cargo build --release -vv && \
+	cp target/release/bamboo .
 
 test:
 	cargo test
