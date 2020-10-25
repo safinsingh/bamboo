@@ -1,4 +1,4 @@
-max_width = 75
+max_width = 80
 reorder_impl_items = true
 merge_imports = true
 normalize_comments = true
