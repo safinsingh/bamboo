@@ -67,18 +67,14 @@ fn main() -> anyhow::Result<()> {
 
 	while running.load(Ordering::SeqCst) {
 		if ran == false {
-			let bar = conf.bar.get(&opts.bar).ok_or_else(|| {
-				anyhow!("Could not find bar: {}", opts.bar)
-			})?;
+			let bar = conf
+				.bar
+				.get(&opts.bar)
+				.ok_or_else(|| anyhow!("Could not find bar: {}", opts.bar))?;
 
-			bar.draw(&xcb_conn, &conn, screen, win).with_context(
-				|| {
-					format!(
-						"Error encountered while drawing bar: {}",
-						opts.bar
-					)
-				},
-			)?;
+			bar.draw(&xcb_conn, &conn, screen, win).with_context(|| {
+				format!("Error encountered while drawing bar: {}", opts.bar)
+			})?;
 
 			ran = true;
 		}
