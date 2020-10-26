@@ -13,3 +13,9 @@ Debian-based systems:
 ```bash
 apt install pkg-config libglib2.0-dev libcairo2-dev
 ```
+
+Arch-based systems:
+
+```bash
+pacman -S pkgconf glib2 cairo
+```
