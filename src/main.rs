@@ -66,7 +66,7 @@ fn main() -> anyhow::Result<()> {
 	.with_context(|| "Error setting Ctrl-C handler")?;
 
 	while running.load(Ordering::SeqCst) {
-		if ran == false {
+		if !ran {
 			let bar = conf
 				.bar
 				.get(&opts.bar)
