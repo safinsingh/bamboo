@@ -89,8 +89,8 @@ impl Bar {
 		.with_context(|| "Failed to create cairo surface")?;
 
 		// override default wm decorations
-		let values =
-			ChangeWindowAttributesAux::default().override_redirect(1);
+		let values = ChangeWindowAttributesAux::default()
+			.override_redirect(Some(true.into()));
 		conn.change_window_attributes(win, &values)
 			.with_context(|| {
 				"Failed to set bar window attributes to override redirect"
