@@ -53,7 +53,9 @@ impl Bar {
 			cairo::XCBConnection::from_raw_none(xcb_conn.get_raw_conn() as _)
 		};
 		let mut visual = find_xcb_visualtype(&xcb_conn, screen.root_visual)
-			.with_context(|| "Failed to find visual type of root visual")?;
+			.with_context(|| {
+			"Failed to find visual type of root visual"
+		})?;
 
 		let root = screen.root;
 		let root_sz = (screen.width_in_pixels, screen.height_in_pixels);
@@ -72,7 +74,9 @@ impl Bar {
 				self.background_color.trim_start_matches('#'),
 				16,
 			)
-			.with_context(|| "Failed to convert bar background color to u32")?,
+			.with_context(|| {
+				"Failed to convert bar background color to u32"
+			})?,
 		);
 
 		conn.create_window(
@@ -105,14 +109,16 @@ impl Bar {
 		.with_context(|| "Failed to create cairo surface")?;
 
 		// override default wm decorations
-		let values = ChangeWindowAttributesAux::default().override_redirect(1);
+		let values =
+			ChangeWindowAttributesAux::default().override_redirect(1);
 		conn.change_window_attributes(win, &values)
 			.with_context(|| {
 				"Failed to set bar window attributes to override redirect"
 			})?;
 
-		conn.map_window(win)
-			.with_context(|| "Failed to map main bar window to root window")?;
+		conn.map_window(win).with_context(|| {
+			"Failed to map main bar window to root window"
+		})?;
 
 		conn.flush()?;
 
