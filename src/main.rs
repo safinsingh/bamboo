@@ -78,6 +78,7 @@ fn main() -> anyhow::Result<()> {
 
 			ran = true;
 		}
+		std::thread::sleep(std::time::Duration::from_millis(16));
 	}
 
 	Ok(())

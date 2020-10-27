@@ -31,6 +31,7 @@ dependencies = [
  "cairo-rs",
  "cairo-sys-rs",
  "clap",
+ "colorsys",
  "ctrlc",
  "notify",
  "serde",
@@ -114,6 +115,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "colorsys"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "525a63f1f8a5b83cf626405c95646cd5024ed639a946063311a12ea9a2efb7b6"
 
 [[package]]
 name = "ctrlc"
