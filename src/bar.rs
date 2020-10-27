@@ -8,6 +8,7 @@ use x11rb::{
 	protocol::xproto::{ConnectionExt, *},
 	COPY_DEPTH_FROM_PARENT,
 };
+use xcb::ffi::xproto::{XCB_ATOM_CARDINAL, XCB_PROP_MODE_REPLACE};
 
 // https://github.com/psychon/x11rb/issues/328
 fn find_xcb_visualtype(
@@ -122,6 +123,30 @@ impl Bar {
 			.flush()
 			.then_some(())
 			.with_context(|| "Failed to flush xcb connection")?;
+
+		xcb::xproto::change_property(
+			xcb_conn,
+			XCB_PROP_MODE_REPLACE as u8,
+			win,
+			4,
+			XCB_ATOM_CARDINAL,
+			32,
+			&[self.height],
+		)
+		.request_check()
+		.with_context(|| "Failed to set _NET_WM_STRUT")?;
+
+		xcb::xproto::change_property(
+			xcb_conn,
+			XCB_PROP_MODE_REPLACE as u8,
+			win,
+			12,
+			XCB_ATOM_CARDINAL,
+			32,
+			&[self.height],
+		)
+		.request_check()
+		.with_context(|| "Failed to set _NET_WM_STRUT_PARTIAL")?;
 
 		Ok(())
 	}
