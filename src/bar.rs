@@ -105,7 +105,6 @@ impl Bar {
 		let ctx = cairo::Context::new(&surface);
 		ctx.push_group_with_content(cairo::Content::Color);
 
-		println!("{:#?}", bg_color);
 		ctx.set_source_rgba(
 			bg_color.get_red() / 255.0,
 			bg_color.get_green() / 255.0,
