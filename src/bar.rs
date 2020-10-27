@@ -1,28 +1,13 @@
 use crate::conf::Bar;
 
 use anyhow::Context;
+use colorsys::{ColorAlpha, Rgb};
 use std::{convert::TryInto, u32};
 use x11rb::{
 	connection::Connection,
 	protocol::xproto::{ConnectionExt, *},
 	COPY_DEPTH_FROM_PARENT,
 };
-
-struct Rgb {
-	r: f64,
-	g: f64,
-	b: f64,
-}
-
-impl Rgb {
-	fn new(num: u32) -> Self {
-		Rgb {
-			r: (num >> 16).into(),
-			g: ((num >> 8) & 0xFF).into(),
-			b: (num & 0xFF).into(),
-		}
-	}
-}
 
 // https://github.com/psychon/x11rb/issues/328
 fn find_xcb_visualtype(
@@ -69,15 +54,10 @@ impl Bar {
 			0
 		}) as i16 + self.offset_y.unwrap_or(0); // FIX: use try_into here
 
-		let bg_color = Rgb::new(
-			u32::from_str_radix(
-				self.background_color.trim_start_matches('#'),
-				16,
-			)
+		let bg_color = Rgb::from_hex_str(&self.background_color)
 			.with_context(|| {
-				"Failed to convert bar background color to u32"
-			})?,
-		);
+				"Failed to convert bar `background-color` to RGB"
+			})?;
 
 		conn.create_window(
 			COPY_DEPTH_FROM_PARENT,         // window depth
@@ -125,7 +105,13 @@ impl Bar {
 		let ctx = cairo::Context::new(&surface);
 		ctx.push_group_with_content(cairo::Content::Color);
 
-		ctx.set_source_rgb(bg_color.r, bg_color.g, bg_color.b);
+		println!("{:#?}", bg_color);
+		ctx.set_source_rgba(
+			bg_color.get_red() / 255.0,
+			bg_color.get_green() / 255.0,
+			bg_color.get_blue() / 255.0,
+			bg_color.get_alpha(),
+		);
 		ctx.paint();
 
 		ctx.pop_group_to_source();
