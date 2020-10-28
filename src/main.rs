@@ -18,6 +18,7 @@ use x11rb::{connection::Connection, xcb_ffi::XCBConnection};
 mod conf;
 use conf::*;
 mod bar;
+mod calc;
 
 #[derive(Clap)]
 #[clap(version = "0.1.0", author = "safinsingh <safin.singh@gmail.com>")]
