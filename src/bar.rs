@@ -124,30 +124,65 @@ impl Bar {
 			.then_some(())
 			.with_context(|| "Failed to flush xcb connection")?;
 
-		xcb::xproto::change_property(
-			xcb_conn,
-			XCB_PROP_MODE_REPLACE as u8,
-			win,
-			4,
-			XCB_ATOM_CARDINAL,
-			32,
-			&[self.height],
-		)
-		.request_check()
-		.with_context(|| "Failed to set _NET_WM_STRUT")?;
+		// xcb::xproto::change_property(
+		// 	xcb_conn,
+		// 	XCB_PROP_MODE_REPLACE as u8,
+		// 	win,
+		// 	4,
+		// 	XCB_ATOM_CARDINAL,
+		// 	32,
+		// 	&[self.height],
+		// )
+		// .request_check()
+		// .with_context(|| "Failed to set _NET_WM_STRUT")?;
 
-		xcb::xproto::change_property(
-			xcb_conn,
-			XCB_PROP_MODE_REPLACE as u8,
-			win,
-			12,
-			XCB_ATOM_CARDINAL,
-			32,
-			&[self.height],
-		)
-		.request_check()
-		.with_context(|| "Failed to set _NET_WM_STRUT_PARTIAL")?;
+		// xcb::xproto::change_property(
+		// 	xcb_conn,
+		// 	XCB_PROP_MODE_REPLACE as u8,
+		// 	win,
+		// 	12,
+		// 	XCB_ATOM_CARDINAL,
+		// 	32,
+		// 	&[self.height],
+		// )
+		// .request_check()
+		// .with_context(|| "Failed to set _NET_WM_STRUT_PARTIAL")?;
+
+		self.change_win_prop();
 
 		Ok(())
+	}
+
+	fn change_win_prop(conn: &xcb::Connection, win: Window) {
+		let insets = &[0, 0, self.height, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+		let type_atom = xcb::intern_atom(conn, true, "CARDINAL")
+			.get_reply()
+			.unwrap()
+			.atom();
+		let property = xcb::intern_atom(conn, true, "_NET_WM_STRUT")
+			.get_reply()
+			.unwrap()
+			.atom();
+
+		xcb::change_property(
+			conn,
+			xcb::PROP_MODE_REPLACE as u8,
+			win,
+			"_NET_WM_STRUT",
+			type_atom,
+			32,
+			insets,
+		);
+
+		xcb::change_property(
+			conn,
+			xcb::PROP_MODE_REPLACE as u8,
+			win,
+			"_NET_WM_STRUT_PARTIAL",
+			type_atom,
+			32,
+			insets,
+		);
 	}
 }
