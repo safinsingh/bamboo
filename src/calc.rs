@@ -1,43 +1,57 @@
-
 use regex::Regex;
+use serde::{Deserialize, Deserializer};
 use std::convert::TryFrom;
-use serde::{ Deserialize, Deserializer };
 
 #[derive(Debug, PartialEq)]
-pub struct Calculation ( Value, Vec<Segment>, );
+pub struct Calculation(Value, Vec<Segment>);
 
 impl Calculation {
 	pub fn calculate(&self, pc: f32) -> f32 {
-		let mut to_return = match self.0.1 {
-			Unit::Pixel|Unit::None => self.0.0,
-			Unit::Percent => ( self.0.0 / 100.0 ) * pc,
+		let mut to_return = match (self.0).1 {
+			Unit::Pixel | Unit::None => (self.0).0,
+			Unit::Percent => ((self.0).0 / 100.0) * pc,
 		};
-		for segment in self.1.iter() {
+		for segment in (self.1).iter() {
 			match segment.0 {
-				Operation::Add => match segment.1.1 {
-					Unit::Pixel|Unit::None => { to_return += segment.1.0 }
-					Unit::Percent => { to_return += ( segment.1.0 / 100.0 ) * pc }
-				}
-				Operation::Subtract => match segment.1.1 {
-					Unit::Pixel|Unit::None => { to_return -= segment.1.0 }
-					Unit::Percent => { to_return -= ( segment.1.0 / 100.0 ) * pc }
-				}
-				Operation::Multiply => match segment.1.1 {
-					Unit::Pixel|Unit::None => { to_return *= segment.1.0 }
-					Unit::Percent => { to_return *= ( segment.1.0 / 100.0 ) * pc }
-				}
-				Operation::Divide => match segment.1.1 {
-					Unit::Pixel|Unit::None => { to_return /= segment.1.0 }
-					Unit::Percent => { to_return /= ( segment.1.0 / 100.0 ) * pc }
-				}
-				Operation::Remainder => match segment.1.1 {
-					Unit::Pixel|Unit::None => { to_return %= segment.1.0 }
-					Unit::Percent => { to_return %= ( segment.1.0 / 100.0 ) * pc }
-				}
-				Operation::Exponent => match segment.1.1 {
-					Unit::Pixel|Unit::None => { to_return = to_return.powf(segment.1.0) }
-					Unit::Percent => { to_return = to_return.powf(( segment.1.0 / 100.0 ) * pc) }
-				}
+				Operation::Add => match (segment.1).1 {
+					Unit::Pixel | Unit::None => to_return += (segment.1).0,
+					Unit::Percent => {
+						to_return += ((segment.1).0 / 100.0) * pc
+					}
+				},
+				Operation::Subtract => match (segment.1).1 {
+					Unit::Pixel | Unit::None => to_return -= (segment.1).0,
+					Unit::Percent => {
+						to_return -= ((segment.1).0 / 100.0) * pc
+					}
+				},
+				Operation::Multiply => match (segment.1).1 {
+					Unit::Pixel | Unit::None => to_return *= (segment.1).0,
+					Unit::Percent => {
+						to_return *= ((segment.1).0 / 100.0) * pc
+					}
+				},
+				Operation::Divide => match (segment.1).1 {
+					Unit::Pixel | Unit::None => to_return /= (segment.1).0,
+					Unit::Percent => {
+						to_return /= ((segment.1).0 / 100.0) * pc
+					}
+				},
+				Operation::Remainder => match (segment.1).1 {
+					Unit::Pixel | Unit::None => to_return %= (segment.1).0,
+					Unit::Percent => {
+						to_return %= ((segment.1).0 / 100.0) * pc
+					}
+				},
+				Operation::Exponent => match (segment.1).1 {
+					Unit::Pixel | Unit::None => {
+						to_return = to_return.powf((segment.1).0)
+					}
+					Unit::Percent => {
+						to_return =
+							to_return.powf(((segment.1).0 / 100.0) * pc)
+					}
+				},
 			}
 		}
 		to_return
@@ -45,31 +59,32 @@ impl Calculation {
 
 	pub fn deserialize<'de, D>(deserializer: D) -> Result<Self, D::Error>
 	where
-		D: Deserializer<'de>
+		D: Deserializer<'de>,
 	{
 		String::deserialize(deserializer).and_then(|s| {
-			Self::try_from(s).map_err(|e| {
-				serde::de::Error::custom(&e)
-			})
+			Self::try_from(s).map_err(|e| serde::de::Error::custom(&e))
 		})
 	}
 }
 
 impl TryFrom<&str> for Calculation {
 	type Error = String;
+
 	fn try_from(v: &str) -> Result<Self, String> {
 		let regex = Regex::new(r#"(?:(\d+)(%|px|))(.*?)$"#).unwrap();
 		let caps = regex.captures(v).ok_or(String::from("Invalid syntax"))?;
-		let base = caps
-			.get(1)
-			.unwrap()
-			.as_str()
-			.parse::<f32>()
-			.map_err(|err| {
-				format!("Failed to parse \"{}\" into an f32: {}",
-					caps.get(1).unwrap().as_str(),
-					err)
-			})?;
+		let base =
+			caps.get(1)
+				.unwrap()
+				.as_str()
+				.parse::<f32>()
+				.map_err(|err| {
+					format!(
+						"Failed to parse \"{}\" into an f32: {}",
+						caps.get(1).unwrap().as_str(),
+						err
+					)
+				})?;
 		let unit = Unit::try_from(caps.get(2).unwrap().as_str())?;
 		let segments = {
 			let mut to_return = Vec::new();
@@ -86,28 +101,38 @@ impl TryFrom<&str> for Calculation {
 
 impl TryFrom<String> for Calculation {
 	type Error = String;
-	fn try_from(v: String) -> Result<Self, String> { Self::try_from(v.as_str()) }
+
+	fn try_from(v: String) -> Result<Self, String> {
+		Self::try_from(v.as_str())
+	}
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Segment ( Operation, Value );
+pub struct Segment(Operation, Value);
 
 impl TryFrom<&str> for Segment {
 	type Error = String;
+
 	fn try_from(v: &str) -> Result<Self, Self::Error> {
-		let regex = Regex::new(r#"(?:(\+|-|\*|/|%|^|.)(\d+(?:\.\d+)?)(%|px|))$"#).unwrap();
-		let caps = regex.captures(v).ok_or(format!("Invalid segment: \"{}\"", v))?;
+		let regex =
+			Regex::new(r#"(?:(\+|-|\*|/|%|^|.)(\d+(?:\.\d+)?)(%|px|))$"#)
+				.unwrap();
+		let caps = regex
+			.captures(v)
+			.ok_or(format!("Invalid segment: \"{}\"", v))?;
 		let operation = Operation::try_from(caps.get(1).unwrap().as_str())?;
-		let value = caps
-			.get(2)
-			.unwrap()
-			.as_str()
-			.parse::<f32>()
-			.map_err(|err| {
-				format!("Failed to parse \"{}\" into an f32: {}",
-					caps.get(2).unwrap().as_str(),
-					err)
-			})?;
+		let value =
+			caps.get(2)
+				.unwrap()
+				.as_str()
+				.parse::<f32>()
+				.map_err(|err| {
+					format!(
+						"Failed to parse \"{}\" into an f32: {}",
+						caps.get(2).unwrap().as_str(),
+						err
+					)
+				})?;
 		let unit = Unit::try_from(caps.get(3).unwrap().as_str())?;
 		Ok(Segment(operation, Value(value, unit)))
 	}
@@ -115,7 +140,10 @@ impl TryFrom<&str> for Segment {
 
 impl TryFrom<String> for Segment {
 	type Error = String;
-	fn try_from(v: String) -> Result<Self, Self::Error> { Self::try_from(v.as_str()) }
+
+	fn try_from(v: String) -> Result<Self, Self::Error> {
+		Self::try_from(v.as_str())
+	}
 }
 
 #[derive(Debug, PartialEq)]
@@ -130,6 +158,7 @@ pub enum Operation {
 
 impl TryFrom<&str> for Operation {
 	type Error = String;
+
 	fn try_from(v: &str) -> Result<Self, Self::Error> {
 		match v {
 			"+" => Ok(Operation::Add),
@@ -138,18 +167,24 @@ impl TryFrom<&str> for Operation {
 			"/" => Ok(Operation::Divide),
 			"%" => Ok(Operation::Remainder),
 			"^" => Ok(Operation::Exponent),
-			_ => Err(format!("Invalid operation \"{src}\". Expected +, -, *, /, or %.", src = v)),
+			_ => Err(format!(
+				"Invalid operation \"{src}\". Expected +, -, *, /, or %.",
+				src = v
+			)),
 		}
 	}
 }
 
 impl TryFrom<String> for Operation {
 	type Error = String;
-	fn try_from(v: String) -> Result<Self, Self::Error> { Self::try_from(v.as_str()) }
+
+	fn try_from(v: String) -> Result<Self, Self::Error> {
+		Self::try_from(v.as_str())
+	}
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Value ( f32, Unit );
+pub struct Value(f32, Unit);
 
 #[derive(Debug, PartialEq)]
 pub enum Unit {
@@ -160,19 +195,26 @@ pub enum Unit {
 
 impl TryFrom<&str> for Unit {
 	type Error = String;
+
 	fn try_from(v: &str) -> Result<Self, Self::Error> {
 		match v {
 			"%" => Ok(Unit::Percent),
 			"px" => Ok(Unit::Pixel),
 			"" => Ok(Unit::None),
-			_ => Err(format!("Invalid unit \"{src}\". Expected % or px.", src = v)),
+			_ => Err(format!(
+				"Invalid unit \"{src}\". Expected % or px.",
+				src = v
+			)),
 		}
 	}
 }
 
 impl TryFrom<String> for Unit {
 	type Error = String;
-	fn try_from(v: String) -> Result<Self, Self::Error> { Self::try_from(v.as_str()) }
+
+	fn try_from(v: String) -> Result<Self, Self::Error> {
+		Self::try_from(v.as_str())
+	}
 }
 
 #[cfg(test)]
@@ -185,26 +227,68 @@ mod tests {
 			Calculation::try_from("100%:-50px").unwrap(),
 			Calculation(
 				Value(100.0, Unit::Percent),
-				vec![
-					Segment(
-						Operation::Subtract,
-						Value(50.0, Unit::Pixel),
-					)
-				],
+				vec![Segment(Operation::Subtract, Value(50.0, Unit::Pixel),)],
 			)
 		);
 	}
 
 	#[test]
 	fn calculate() {
-		assert_eq!(Calculation::try_from("100%:-50px").unwrap().calculate(100.0).round(), 50.0);
-		assert_eq!(Calculation::try_from("50%:-25px").unwrap().calculate(100.0).round(), 25.0);
-		assert_eq!(Calculation::try_from("100px:-50px").unwrap().calculate(0.0).round(), 50.0);
-		assert_eq!(Calculation::try_from("100%:+50px").unwrap().calculate(100.0).round(), 150.0);
-		assert_eq!(Calculation::try_from("100%:*2").unwrap().calculate(100.0).round(), 200.0);
-		assert_eq!(Calculation::try_from("100%:/2").unwrap().calculate(100.0).round(), 50.0);
-		assert_eq!(Calculation::try_from("100%:^2").unwrap().calculate(4.0).round(), 16.0);
-		assert_eq!(Calculation::try_from("100%:%2").unwrap().calculate(10.0).round(), 0.0);
+		assert_eq!(
+			Calculation::try_from("100%:-50px")
+				.unwrap()
+				.calculate(100.0)
+				.round(),
+			50.0
+		);
+		assert_eq!(
+			Calculation::try_from("50%:-25px")
+				.unwrap()
+				.calculate(100.0)
+				.round(),
+			25.0
+		);
+		assert_eq!(
+			Calculation::try_from("100px:-50px")
+				.unwrap()
+				.calculate(0.0)
+				.round(),
+			50.0
+		);
+		assert_eq!(
+			Calculation::try_from("100%:+50px")
+				.unwrap()
+				.calculate(100.0)
+				.round(),
+			150.0
+		);
+		assert_eq!(
+			Calculation::try_from("100%:*2")
+				.unwrap()
+				.calculate(100.0)
+				.round(),
+			200.0
+		);
+		assert_eq!(
+			Calculation::try_from("100%:/2")
+				.unwrap()
+				.calculate(100.0)
+				.round(),
+			50.0
+		);
+		assert_eq!(
+			Calculation::try_from("100%:^2")
+				.unwrap()
+				.calculate(4.0)
+				.round(),
+			16.0
+		);
+		assert_eq!(
+			Calculation::try_from("100%:%2")
+				.unwrap()
+				.calculate(10.0)
+				.round(),
+			0.0
+		);
 	}
 }
-
