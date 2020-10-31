@@ -46,7 +46,9 @@ impl TryFrom<&str> for Calculation {
 
 	fn try_from(v: &str) -> Result<Self, String> {
 		let regex = Regex::new(r#"(?:(\d+)(%|px|))(.*?)$"#).unwrap();
-		let caps = regex.captures(v).ok_or_else(|| String::from("Invalid syntax"))?;
+		let caps = regex
+			.captures(v)
+			.ok_or_else(|| String::from("Invalid syntax"))?;
 		let base =
 			caps.get(1)
 				.unwrap()
