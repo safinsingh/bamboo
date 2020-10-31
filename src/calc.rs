@@ -1,8 +1,7 @@
 use regex::Regex;
-use serde::{Deserialize, Deserializer};
 use std::convert::TryFrom;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Calculation(Value, Vec<Segment>);
 
 impl Calculation {
@@ -56,15 +55,6 @@ impl Calculation {
 		}
 		to_return
 	}
-
-	pub fn deserialize<'de, D>(deserializer: D) -> Result<Self, D::Error>
-	where
-		D: Deserializer<'de>,
-	{
-		String::deserialize(deserializer).and_then(|s| {
-			Self::try_from(s).map_err(|e| serde::de::Error::custom(&e))
-		})
-	}
 }
 
 impl TryFrom<&str> for Calculation {
@@ -107,7 +97,7 @@ impl TryFrom<String> for Calculation {
 	}
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Segment(Operation, Value);
 
 impl TryFrom<&str> for Segment {
@@ -146,7 +136,7 @@ impl TryFrom<String> for Segment {
 	}
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Operation {
 	Add,
 	Subtract,
@@ -183,10 +173,10 @@ impl TryFrom<String> for Operation {
 	}
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Value(f32, Unit);
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Unit {
 	Pixel,
 	Percent,

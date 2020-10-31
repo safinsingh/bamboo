@@ -38,7 +38,7 @@ fn main() -> anyhow::Result<()> {
 		format!("Failed to read configuration file from: {}", opts.config)
 	})?;
 
-	let conf: Config = toml::from_str(&read)
+	let mut conf: Config = toml::from_str(&read)
 		.with_context(|| "Failed to deserialize configuration")?;
 
 	let (xcb_conn, screen_num) = xcb::Connection::connect(None)
@@ -70,8 +70,10 @@ fn main() -> anyhow::Result<()> {
 		if !ran {
 			let bar = conf
 				.bar
-				.get(&opts.bar)
+				.get_mut(&opts.bar)
 				.ok_or_else(|| anyhow!("Could not find bar: {}", opts.bar))?;
+
+			bar.calc(screen);
 
 			bar.draw(&xcb_conn, &conn, screen, win).with_context(|| {
 				format!("Error encountered while drawing bar: {}", opts.bar)
