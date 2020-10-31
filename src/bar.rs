@@ -28,6 +28,19 @@ fn find_xcb_visualtype(
 }
 
 impl Bar {
+	pub fn calc(&mut self, screen: &Screen) {
+		let (w, h): (f32, f32) = (
+			screen.width_in_pixels.into(),
+			screen.height_in_pixels.into(),
+		);
+		self.calc_width = self.width.get(w).round() as u16;
+		self.calc_height = self.height.get(h).round() as u16;
+		self.calc_offset_x =
+			self.offset_x.clone().map(|v| v.get(w).round() as i16);
+		self.calc_offset_y =
+			self.offset_y.clone().map(|v| v.get(h).round() as i16);
+	}
+
 	pub fn draw(
 		&self,
 		xcb_conn: &xcb::Connection,
@@ -46,14 +59,14 @@ impl Bar {
 		let root = screen.root;
 		let root_sz = (screen.width_in_pixels, screen.height_in_pixels);
 
-		let x_pos = ((root_sz.0 - self.width) / 2)
+		let x_pos = ((root_sz.0 - self.calc_width) / 2)
 			.try_into()
 			.with_context(|| "Failed to set X position of bar")?;
 		let y_pos = (if self.bottom == Some(true) {
-			root_sz.1 - self.height
+			root_sz.1 - self.calc_height
 		} else {
 			0
-		}) as i16 + self.offset_y.unwrap_or(0); // FIX: use try_into here
+		}) as i16 + self.calc_offset_y.unwrap_or(0); // FIX: use try_into here
 
 		let bg_color = Rgb::from_hex_str(&self.background_color)
 			.with_context(|| {
@@ -66,8 +79,8 @@ impl Bar {
 			root,                           // parent window
 			x_pos,                          // x position
 			y_pos,                          // y position
-			self.width,                     // width
-			self.height,                    // height
+			self.calc_width,                // width
+			self.calc_height,               // height
 			self.border_width.unwrap_or(0), // border width
 			WindowClass::InputOutput,       // window class
 			screen.root_visual,             // visual
@@ -84,8 +97,8 @@ impl Bar {
 						as *mut cairo_sys::xcb_visualtype_t,
 				)
 			},
-			self.width.into(),
-			self.height.into(),
+			self.calc_width.into(),
+			self.calc_height.into(),
 		)
 		.with_context(|| "Failed to create cairo surface")?;
 
@@ -131,7 +144,7 @@ impl Bar {
 			4,
 			XCB_ATOM_CARDINAL,
 			32,
-			&[self.height],
+			&[self.calc_height],
 		)
 		.request_check()
 		.with_context(|| "Failed to set _NET_WM_STRUT")?;
@@ -143,7 +156,7 @@ impl Bar {
 			12,
 			XCB_ATOM_CARDINAL,
 			32,
-			&[self.height],
+			&[self.calc_height],
 		)
 		.request_check()
 		.with_context(|| "Failed to set _NET_WM_STRUT_PARTIAL")?;
