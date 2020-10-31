@@ -46,7 +46,7 @@ impl TryFrom<&str> for Calculation {
 
 	fn try_from(v: &str) -> Result<Self, String> {
 		let regex = Regex::new(r#"(?:(\d+)(%|px|))(.*?)$"#).unwrap();
-		let caps = regex.captures(v).ok_or(String::from("Invalid syntax"))?;
+		let caps = regex.captures(v).ok_or_else(|| String::from("Invalid syntax"))?;
 		let base =
 			caps.get(1)
 				.unwrap()
@@ -63,7 +63,7 @@ impl TryFrom<&str> for Calculation {
 		let segments = {
 			let mut to_return = Vec::new();
 			let as_str = caps.get(3).unwrap().as_str();
-			let as_split = as_str.split(":").collect::<Vec<&str>>();
+			let as_split = as_str.split(':').collect::<Vec<&str>>();
 			for segment_as_str in as_split.iter().skip(1) {
 				to_return.push(Segment::try_from(*segment_as_str)?);
 			}
