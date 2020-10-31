@@ -11,37 +11,21 @@ impl Calculation {
 			Unit::Percent => ((self.0).0 / 100.0) * pc,
 		};
 		for segment in (self.1).iter() {
+			macro_rules! calculation {
+				($expr:expr) => { $expr };
+				($op:tt) => {
+					match (segment.1).1 {
+						Unit::Pixel | Unit::None => calculation!(to_return $op (segment.1).0),
+						Unit::Percent => calculation!(to_return $op ((segment.1).0 / 100.0) * pc),
+					}
+				};
+			}
 			match segment.0 {
-				Operation::Add => match (segment.1).1 {
-					Unit::Pixel | Unit::None => to_return += (segment.1).0,
-					Unit::Percent => {
-						to_return += ((segment.1).0 / 100.0) * pc
-					}
-				},
-				Operation::Subtract => match (segment.1).1 {
-					Unit::Pixel | Unit::None => to_return -= (segment.1).0,
-					Unit::Percent => {
-						to_return -= ((segment.1).0 / 100.0) * pc
-					}
-				},
-				Operation::Multiply => match (segment.1).1 {
-					Unit::Pixel | Unit::None => to_return *= (segment.1).0,
-					Unit::Percent => {
-						to_return *= ((segment.1).0 / 100.0) * pc
-					}
-				},
-				Operation::Divide => match (segment.1).1 {
-					Unit::Pixel | Unit::None => to_return /= (segment.1).0,
-					Unit::Percent => {
-						to_return /= ((segment.1).0 / 100.0) * pc
-					}
-				},
-				Operation::Remainder => match (segment.1).1 {
-					Unit::Pixel | Unit::None => to_return %= (segment.1).0,
-					Unit::Percent => {
-						to_return %= ((segment.1).0 / 100.0) * pc
-					}
-				},
+				Operation::Add => calculation!(+=),
+				Operation::Subtract => calculation!(-=),
+				Operation::Multiply => calculation!(*=),
+				Operation::Divide => calculation!(/=),
+				Operation::Remainder => calculation!(%=),
 				Operation::Exponent => match (segment.1).1 {
 					Unit::Pixel | Unit::None => {
 						to_return = to_return.powf((segment.1).0)
