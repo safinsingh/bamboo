@@ -11,7 +11,7 @@ env:
 
 jobs:
     build:
-        runs-on: ubuntu-latest-xl
+        runs-on: ubuntu-latest
 
         steps:
             - name: Set up
@@ -28,7 +28,7 @@ jobs:
               run: cargo build
 
     format:
-        runs-on: ubuntu-latest-xl
+        runs-on: ubuntu-latest
 
         steps:
             - name: Set up
@@ -45,7 +45,7 @@ jobs:
               run: cargo fmt -- --check
 
     lint:
-        runs-on: ubuntu-latest-xl
+        runs-on: ubuntu-latest
 
         steps:
             - name: Set up
@@ -62,7 +62,7 @@ jobs:
               run: cargo clippy -- -D warnings
 
     test:
-        runs-on: ubuntu-latest-xl
+        runs-on: ubuntu-latest
 
         steps:
             - name: Set up
